@@ -3,6 +3,8 @@
 **Course:** COMP6822001 — Speech Recognition (Final Project)
 **Concept:** The user speaks 3–6 words; the system continuously transcribes them and surfaces an interesting Wikipedia article that connects them — updating live as words are spoken, not after a "speak → stop → process" cycle.
 
+> **If you are Claude:** whenever you finish a task from this plan, check its box (`- [ ]` → `- [x]`, or add ✅ to a roadmap step) in this file.
+
 ---
 
 ## 1. Rubric Clarification: Model vs. Inference
@@ -42,123 +44,81 @@ Each finalized word triggers a live article update — not a batch after all six
 
 ---
 
-## 3. Revised Roadmap (Step by Step)
+## 3. Roadmap
 
-### Step 1 — Speech recognition (backend)
-- **Do not train a model.** Use pretrained Vosk:
-  - `vosk-model-en-us-0.22` for accuracy, or the `small` model for weak hardware.
-- Vosk streams natively: `PartialResult()` while speaking, `Result()` when a segment ends. This directly satisfies the "partial/updated transcription" requirement.
-- Redirect the effort saved from training into WER experiments.
+### ✅ Step 1 — Speech recognition (backend)
+- Pretrained Vosk model (`vosk-model-en-us-0.22-lgraph`), no training.
+- `asr.py`: mic → `KaldiRecognizer` → `PartialResult()` while speaking, `Result()` at segment end.
+- `run_asr.bat` launches it.
 
-### Step 2 — Text processing (backend)
-- Keep it small for 3–6 words: lowercase, remove stopwords ("the", "of", "um"), optionally lemmatize / extract nouns and entities with spaCy.
-- **Word finalizer** is the more important piece: Vosk partials change as the user speaks
-  (`machine` → `machine learn` → `machine learning`). Only send stable words to the query, or results will flicker and the API gets spammed.
+### ✅ Step 2 — Text processing (backend)
+- `WordFinalizer` in `asr.py`: a word is stable once a new word appears after it in the partial; flush remaining words on `Result()`.
+- Stopwords filtered into a running `query_words` list (lowercase, small hardcoded stopword set).
+- `test_finalizer.py` covers the finalizer logic.
 
-### Step 3 — Wikipedia API (backend)
-- No need to compute most-used words per article — Wikipedia's CirrusSearch already ranks well.
-- Endpoints:
-  - `/w/rest.php/v1/search/page?q=...&limit=20` — candidate articles + excerpts
-  - `/api/rest_v1/page/summary/{title}` — extract, thumbnail, description (for frontend cards)
-  - Pageviews API — signal for "interesting"
-- Always send a descriptive `User-Agent` header (app name + contact), or requests may be throttled/rejected.
-- Cache results to reduce latency and network dependency.
+### ☐ Step 3 — Wikipedia API (backend)
+- Query `/w/rest.php/v1/search/page?q=...&limit=20` for candidate articles + excerpts.
+- Query `/api/rest_v1/page/summary/{title}` for extract, thumbnail, description.
+- Use the Pageviews API as an "interesting" signal.
+- Send a descriptive `User-Agent` header on every request.
+- Cache results (query → response) to cut latency and API calls.
 
-### Step 4 — Reranking model (backend)
-Wikipedia returns ~20 candidates; our model reranks them with a combined score:
+### ☐ Step 4 — Reranking model (backend)
+- Score each of the ~20 candidates on:
+  - **Relevance** — TF-IDF/BM25 or `all-MiniLM-L6-v2` embeddings against the query.
+  - **Coverage** — count of matched query terms in title/extract.
+  - **Interestingness** — pageviews, has image, article length.
+- Combine into one score; rank by it.
+- Define "interesting" explicitly in the report.
 
-| Component | What it measures | How |
-|---|---|---|
-| Relevance | Match between spoken words and article | TF-IDF / BM25, or local sentence embeddings (e.g. `all-MiniLM-L6-v2`) |
-| Coverage | How many spoken words the article connects | Count matched query terms in extract/title |
-| Interestingness | How engaging the article is | Pageviews, has image, article length |
+### ☐ Step 5 — Frontend
+- Build the thin vertical slice first: mic → Vosk → WebSocket → plain HTML showing partial text + article title.
+- Then apply one visualization from Section 6.
 
-- Coverage is the core of the Rabbit Hole idea: an article linking "volcano + music + Iceland" beats one matching a single word.
-- **Define "interesting" explicitly in the report** — it is subjective and will be questioned.
-
-### Step 5 — Frontend
-- Build a **thin vertical slice first** (mic → Vosk → WebSocket → plain HTML page showing partial text + article title), then polish each layer.
-- See Section 6 for design ideas.
-
-### Step 6 — Evaluation (backend + frontend)
-- Replace random stress testing with a **structured retrieval experiment**: ~50 queries, each result judged "relevant/interesting or not" → report **Precision@1**.
-- Use two independent raters to reduce subjectivity.
-- Log frontend bugs separately.
+### ☐ Step 6 — Evaluation (backend + frontend)
+- Run ~50 queries, two raters judge "relevant/interesting or not," report Precision@1.
+- Log frontend bugs separately from ASR/retrieval bugs.
 
 ---
 
-## 4. Required by the Brief (Missing from Original Roadmap)
+## 4. Required by the Brief (Not Yet Done)
 
 - [ ] **WER experiments** (`jiwer`)
   - Baseline: clean speech
-  - E1: Indonesian-accented vs. native English speech (Vosk is trained mostly on US accents)
+  - E1: Indonesian-accented vs. native English speech
   - E2: Background noise (campus / café conditions)
-  - Optional: rare words / proper nouns (key risk for a Wikipedia app)
+  - Optional: rare words / proper nouns
 - [ ] **Latency measurement** — timestamp every pipeline stage
   - ASR latency: word spoken → word on screen
   - End-to-end latency: word finalized → article shown
   - Real-time factor (RTF)
 - [ ] **Error analysis** — reference vs. output table, categorize substitution/deletion/insertion, identify patterns
-- [ ] **Concrete, reachable target user** — "people who like to explore" is too generic; confirm with lecturer
+- [ ] **Concrete, reachable target user** — confirm with lecturer
 - [ ] **User testing with ≥5 real target users** — tasks, observation, questionnaire/interview, analysis
 - [ ] **Combined evaluation** — link user feedback to technical results
-- [ ] **AI Usage Log** — start now, fill in continuously (including planning conversations)
+- [ ] **AI Usage Log** — fill in continuously (including planning conversations)
 - [ ] **AI Usage Declaration** at the end of the report
-- [ ] **Evidence**: screenshots, architecture diagram, results, transcription examples, feedback analysis
+- [ ] **Evidence** — screenshots, architecture diagram, results, transcription examples, feedback analysis
 
 ---
 
-## 5. Pros and Cons of Key Decisions
+## 5. Key Decisions
 
-### Pretrained Vosk (vs. training / Whisper)
-- **Pros:** native streaming with partials, fast on CPU, fully offline, easy setup.
-- **Cons:** lower accuracy than Whisper-class models; likely weaker on Indonesian-accented English; **fixed vocabulary** means rare words and proper nouns (e.g. "Fibonacci", "Majapahit") may be misrecognized or impossible to output; Kaldi architecture is more involved to explain.
-- **Alternative:** faster-whisper + streaming wrapper — more accurate, better on rare words, but not natively streaming, higher latency, wants a GPU.
-- **Verdict:** Vosk is safer; treat vocabulary coverage as a known weakness and test it.
-
-### Word finalizer
-- **Pros:** stable queries, no UI flicker, far fewer API calls.
-- **Cons:** adds deliberate delay; stability threshold needs tuning (too strict = laggy, too loose = flicker).
-
-### Live Wikipedia API (vs. local index)
-- **Pros:** no multi-GB download, always current, strong ranking for free.
-- **Cons:** demo depends on network; variable response times; rate limits; risk of the lecturer asking "what did *you* build?"
-- **Mitigation:** caching + our own reranker.
-
-### Reranking (relevance + coverage + interestingness)
-- **Pros:** cheap, explainable, clearly our own contribution.
-- **Cons:** short extracts limit TF-IDF; embeddings add another model and latency; interestingness weights are hand-tuned and must be justified.
-
-### Vertical slice first
-- **Pros:** confirms real-time pipeline early (protects the 30% application component); integration issues surface early.
-- **Cons:** some throwaway code; app looks rough for longer.
-
-### Structured retrieval evaluation
-- **Pros:** reportable metric, more rigorous experimentation section.
-- **Cons:** manual labeling effort; subjective judgments.
-
-### Accent and noise experiments
-- **Pros:** directly tied to real users and demo environment.
-- **Cons:** requires recruiting speakers and consistent recordings.
-
-### Ambitious frontend
-- **Pros:** strong demo impact, memorable concept.
-- **Cons:** time sink; Three.js competes with Vosk for CPU (may hurt latency); rubric doesn't reward visuals directly.
-- **Verdict:** do the partial-vs-final visualization first; 3D only if time allows.
-
-### Overall concept
-- **Pros:** fun, original, easy to demo and explain.
-- **Cons:** weakest point is the **real-world problem** framing. User testing, the target-user component, and the discussion section all depend on it — pin down a concrete target user early.
+- ASR: pretrained Vosk (`lgraph`), not Whisper — streams natively, runs on CPU, works offline. Known weakness: fixed vocabulary misses rare/proper nouns — test this explicitly in Step 4's WER experiments.
+- Word finalizer: required before querying Wikipedia, or the UI flickers and the API gets spammed on every partial revision.
+- Wikipedia: call the live API + cache, don't build a local index.
+- Reranker: hand-rolled relevance + coverage + interestingness score — keep it explainable, justify the weights in the report.
+- Frontend: ship the vertical slice first (Section 3, Step 5), then layer on visuals.
 
 ---
 
 ## 6. Frontend Ideas
 
 1. **Literal rabbit hole** — 3D tunnel (Three.js); each finalized word drops you one level deeper; articles appear as portals on the walls.
-2. **Visible partial vs. final words** — partial words are translucent and flickering, then "solidify" when finalized. Cheap, looks good, and proves the system is streaming. *(Do this first.)*
-3. **Constellation mode** — words become stars, the article is the constellation connecting them; lines show which word matched which part (visualizes the coverage score).
-4. **Trail map** — end-of-session graph of every article visited; exportable/shareable; useful for user testing questions.
-5. **Voice navigation** — "deeper" follows a link, "back" returns. Nice-to-have only (adds command-detection complexity).
+2. **Visible partial vs. final words** — partial words are translucent/flickering, then solidify when finalized. *(Build this first — cheap, proves the system is streaming.)*
+3. **Constellation mode** — words become stars, the article is the constellation connecting them; lines show which word matched which part of the article.
+4. **Trail map** — end-of-session graph of every article visited; exportable, useful for user-testing questions.
+5. **Voice navigation** — "deeper" follows a link, "back" returns. Nice-to-have only.
 
 ---
 

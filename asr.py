@@ -1,4 +1,4 @@
-"""Phase 1-3: continuous mic -> Vosk -> word finalizer -> query terms -> Wikipedia candidates."""
+"""Phase 1-4: mic -> Vosk -> word finalizer -> query terms -> Wikipedia candidates -> reranked article."""
 import argparse
 import csv
 import json
@@ -7,9 +7,12 @@ import queue
 import sys
 import threading
 import time
+import urllib.parse
 
 import sounddevice as sd
 from vosk import KaldiRecognizer, Model
+
+import rerank
 
 MODEL_PATH = "vosk-model-en-us-0.22-lgraph"
 SAMPLE_RATE = 16000
@@ -37,13 +40,26 @@ def key_listener():
             paused.clear() if paused.is_set() else paused.set()
 
 
+LATENCY_HEADER = ["timestamp", "backend", "n_words", "query", "wait_ms", "search_ms", "rerank_ms", "total_ms",
+                  "requests", "cached", "n_results", "n_filtered", "top_title", "superseded"]
+
+
 def log_latency(row):
+    if os.path.exists(LATENCY_LOG):
+        with open(LATENCY_LOG, encoding="utf-8") as f:
+            old_header = f.readline().strip()
+        if old_header != ",".join(LATENCY_HEADER):  # older format: set it aside, don't mix rows
+            os.replace(LATENCY_LOG, f"latency_{time.strftime('%Y%m%d_%H%M%S')}.csv")
     new = not os.path.exists(LATENCY_LOG)
     with open(LATENCY_LOG, "a", newline="", encoding="utf-8") as f:
         w = csv.writer(f)
         if new:
-            w.writerow(["timestamp", "backend", "n_words", "query", "ms", "requests", "cached", "n_results", "superseded"])
+            w.writerow(LATENCY_HEADER)
         w.writerow(row)
+
+
+def wiki_url(title):
+    return "https://en.wikipedia.org/wiki/" + urllib.parse.quote(title.replace(" ", "_"))
 
 
 class WordFinalizer:
@@ -89,6 +105,12 @@ def main():
         import wiki
     sys.stdout.reconfigure(errors="replace")
 
+    def load_reranker():
+        rerank.load_model()
+        print("\n[reranker ready]")
+
+    threading.Thread(target=load_reranker, daemon=True).start()  # ~11s, overlaps the Vosk load
+
     model = Model(MODEL_PATH)
     rec = KaldiRecognizer(model, SAMPLE_RATE)
 
@@ -102,18 +124,34 @@ def main():
             gen, words, t0 = jobs.get()
             if not jobs.empty():
                 continue  # a newer query is already waiting
+            t_start = time.perf_counter()  # t0 = word finalized; the gap is time queued behind older work
             try:
                 results, stats = wiki.candidates(words)
+                t1 = time.perf_counter()
+                ranked, dropped = rerank.rerank(words, results)
             except Exception as e:
                 print(f"\nsearch failed: {e}", file=sys.stderr)
                 continue
-            ms = (time.perf_counter() - t0) * 1000
+            t2 = time.perf_counter()
+            wait_ms, search_ms = (t_start - t0) * 1000, (t1 - t_start) * 1000
+            rerank_ms, total_ms = (t2 - t1) * 1000, (t2 - t0) * 1000
             superseded = gen != latest[0]
+            top = ranked[0]["title"] if ranked else ""
             log_latency([time.strftime("%Y-%m-%d %H:%M:%S"), backend, len(words), " ".join(words),
-                         f"{ms:.0f}", stats["requests"], stats["cached"], len(results), superseded])
-            if not superseded:
-                titles = " | ".join(c["title"] for c in results[:3]) or "(no results)"
-                print(f"\narticle: {titles}  ({ms:.0f}ms, {stats['requests']} req, {stats['cached']} cached)")
+                         f"{wait_ms:.0f}", f"{search_ms:.0f}", f"{rerank_ms:.0f}", f"{total_ms:.0f}", stats["requests"],
+                         stats["cached"], len(results), dropped, top, superseded])
+            if superseded:
+                continue
+            if not ranked:
+                print("\narticle: (no results)")
+                continue
+            p = ranked[0]["parts"]
+            print(f"\narticle: {top}  {wiki_url(top)}\n"
+                  f"         (rel {p['rel']:.2f} cov {p['cov']:.2f} int {p['int']:.2f}"
+                  f"{' obvious' if p['obvious'] else ''} | {total_ms:.0f}ms: wait {wait_ms:.0f}"
+                  f" + search {search_ms:.0f} + rerank {rerank_ms:.0f}, {dropped} noise dropped)")
+            if len(ranked) > 1:
+                print(f"  also:  {' | '.join(c['title'] for c in ranked[1:3])}")
 
     threading.Thread(target=search_worker, daemon=True).start()
 

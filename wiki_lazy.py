@@ -30,11 +30,11 @@ def _try(url):
 def _categories(pageids):
     qs = urllib.parse.urlencode({
         "action": "query", "format": "json", "formatversion": "2",
-        "pageids": "|".join(map(str, pageids)), "prop": "categories",
+        "pageids": "|".join(map(str, pageids)), "prop": "categories|info",
         "clshow": "!hidden", "cllimit": "max",
     })
     pages = (_try(f"{API}?{qs}") or {}).get("query", {}).get("pages", [])
-    return {p["pageid"]: [c["title"] for c in p.get("categories", [])] for p in pages}
+    return {p["pageid"]: ([c["title"] for c in p.get("categories", [])], p.get("length", 0)) for p in pages}
 
 
 def candidates(words):
@@ -45,7 +45,7 @@ def candidates(words):
     pages = (_try(f"{SEARCH}?{qs}") or {}).get("pages", [])
 
     end = date.today() - timedelta(days=1)
-    span = f"daily/{(end - timedelta(days=29)):%Y%m%d}/{end:%Y%m%d}"
+    span = f"daily/{(end - timedelta(days=59)):%Y%m%d}/{end:%Y%m%d}"  # 60 days, same window as wiki.py
     results, disambig = [], {}
     for i, p in enumerate(pages):
         key = urllib.parse.quote(p["key"], safe="")
@@ -63,7 +63,7 @@ def candidates(words):
 
     cats = _categories([c["pageid"] for c in results]) if results else {}
     for c in results:
-        c["categories"] = cats.get(c["pageid"], [])
+        c["categories"], c["length"] = cats.get(c["pageid"], ([], 0))
         add_flags(c, disambig[c["pageid"]])
 
     after = _fetch.cache_info()

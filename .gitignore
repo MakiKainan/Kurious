@@ -1,6 +1,18 @@
+# models (download separately, see README)
 vosk-model-*/
 *.zip
+
+# runtime data
+cache.db*
+latency*.csv
+
+# generated documents
+*.pdf
+
+# Python / tooling
 __pycache__/
 *.pyc
-cache.db
-latency.csv
+.venv/
+venv/
+.vscode/
+.idea/

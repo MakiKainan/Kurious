@@ -66,14 +66,16 @@ Each finalized word triggers a live article update — not a batch after all six
 - [x] Tests: `test_wiki.py` (`--net` for live).
 - Measured cold latency for "volcano iceland music": full ~2.8–3.0s (3–6 requests), lazy ~14–29s (42 requests). Cache hit ~0ms. Redo with real runs for the report.
 
-### ☐ Step 4 — Reranking model (backend)
-- Score each of the ~20 candidates on:
-  - **Relevance** — TF-IDF/BM25 or `all-MiniLM-L6-v2` embeddings against the query.
-  - **Coverage** — count of matched query terms in title/extract.
-  - **Interestingness** — pageviews, has image, article length.
-- **Noise filter (before scoring):** drop disambiguation pages, "List of…" pages, bare year pages and stubs. Keep people only if famous (pageviews above a threshold).
-- Combine into one score; rank by it.
-- Define "interesting" explicitly in the report.
+### ✅ Step 4 — Reranking model (backend)
+- [x] `rerank.py`, tested by `test_rerank.py` (`--net` for real model + live Wikipedia).
+- [x] **Noise filter (before scoring):** drops disambiguation pages, lists (`List/Index/Outline/Glossary/Timeline of`), date pages (`1997`, `1990s`, `19th century`, `March 1`, `1997 in music`), stubs (< 2,500 bytes or a `... stubs` category) and non-famous people (< 30,000 views over ~60 days). Falls back to the unfiltered pool if everything is dropped.
+- [x] **Relevance** `rel`: cosine similarity between `all-MiniLM-L6-v2` embeddings of the spoken words and `title. description. extract` (first 128 tokens), clipped to [0, 1]. Article embeddings cached by page id.
+- [x] **Coverage** `cov`: fraction of spoken words the article connects to — returned by that word's own search, or mentioned in title/description/extract (accent-stripped, plural-stripped, prefix match for 4+ letters).
+- [x] **Interestingness** `int` (report definition): `0.5·views + 0.25·has_image + 0.25·depth`, with `views = log10(views+1)/6` capped at 1 (1M views in ~60 days = 1.0) and `depth = min(1, bytes/50,000)`.
+- [x] **Obviousness penalty**: title equal to a spoken word or the whole query (e.g. "Volcano") is penalized, so the rabbit hole goes past the obvious.
+- [x] Score = `0.40·rel + 0.35·cov + 0.25·int − 0.15·obvious`. Weights are hand-set; tune and justify them against the Step 6 Precision@1 set.
+- [x] `asr.py` prints the top pick with its Wikipedia URL, score parts and 2 runners-up; `latency.csv` logs `wait_ms`, `search_ms`, `rerank_ms`, `total_ms`, `n_filtered`, `top_title`.
+- Measured: rerank of a fresh ~76-article pool 1.1–1.5s cold (MiniLM, 4 threads, 128 tokens; 256 tokens was ~4.5s), ~30ms when embeddings are cached. Model load ~11s of imports at startup, in the background. Sample top picks: "napoleon war russia" → French invasion of Russia; "shark ocean horror" → Monster Shark; "volcano iceland music" → Thrihnukagigur.
 
 ### ☐ Step 5 — Frontend
 - Build the thin vertical slice first: mic → Vosk → WebSocket → plain HTML showing partial text + article title.

@@ -56,7 +56,7 @@ class WikiClient:
         params = {
             "action": "query", "format": "json", "formatversion": "2",
             "generator": "search", "gsrsearch": q, "gsrlimit": 20,
-            "prop": "extracts|pageimages|pageviews|description|categories|pageprops",
+            "prop": "extracts|pageimages|pageviews|description|categories|pageprops|info",
             "exintro": 1, "explaintext": 1, "exlimit": "max",
             "piprop": "thumbnail", "pithumbsize": 400,
             "clshow": "!hidden", "cllimit": "max", "ppprop": "disambiguation",
@@ -89,6 +89,7 @@ class WikiClient:
                 "extract": p.get("extract", ""), "description": p.get("description", ""),
                 "thumbnail": (p.get("thumbnail") or {}).get("source"),
                 "views": sum(v or 0 for v in (p.get("pageviews") or {}).values()),
+                "length": p.get("length", 0),
                 "categories": [x["title"] for x in p.get("categories", [])],
                 "rank": p.get("index", 99), "matched_by": [q],
             }

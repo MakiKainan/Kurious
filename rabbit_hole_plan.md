@@ -56,23 +56,28 @@ Each finalized word triggers a live article update — not a batch after all six
 - Stopwords filtered into a running `query_words` list (lowercase, small hardcoded stopword set).
 - `test_finalizer.py` covers the finalizer logic.
 
-### ☐ Step 3 — Wikipedia API (backend)
-- Query `/w/rest.php/v1/search/page?q=...&limit=20` for candidate articles + excerpts.
-- Query `/api/rest_v1/page/summary/{title}` for extract, thumbnail, description.
-- Use the Pageviews API as an "interesting" signal.
-- Send a descriptive `User-Agent` header on every request.
-- Cache results (query → response) to cut latency and API calls.
+### ✅ Step 3 — Wikipedia API (backend)
+- [x] `wiki_lazy.py` baseline: REST search + per-candidate summary and pageviews (42 requests per query), stdlib only.
+- [x] `wiki.py` optimized client: one MediaWiki Action API call returns extract, thumbnail, description, pageviews and categories for ~20 candidates (deviation from the REST endpoints above, same data, far fewer round trips). Follows `pvipcontinue` pagination, or ~8 of 20 candidates silently get 0 views.
+- [x] Session reuse, retries, descriptive `User-Agent`, memory + sqlite (`cache.db`, 24h TTL) cache with stale fallback when offline.
+- [x] Wider pool: full query + one search per word, merged by pageid with `matched_by` (feeds Step 4 coverage).
+- [x] Flags `is_person`, `is_disambig`, `is_list` derived per candidate (inputs for the Step 4 filter and Step 5 themes).
+- [x] `asr.py` runs searches on a background worker; superseded queries are skipped/dropped; `--backend full|lazy`; every search logged to `latency.csv`.
+- [x] Tests: `test_wiki.py` (`--net` for live).
+- Measured cold latency for "volcano iceland music": full ~2.8–3.0s (3–6 requests), lazy ~14–29s (42 requests). Cache hit ~0ms. Redo with real runs for the report.
 
 ### ☐ Step 4 — Reranking model (backend)
 - Score each of the ~20 candidates on:
   - **Relevance** — TF-IDF/BM25 or `all-MiniLM-L6-v2` embeddings against the query.
   - **Coverage** — count of matched query terms in title/extract.
   - **Interestingness** — pageviews, has image, article length.
+- **Noise filter (before scoring):** drop disambiguation pages, "List of…" pages, bare year pages and stubs. Keep people only if famous (pageviews above a threshold).
 - Combine into one score; rank by it.
 - Define "interesting" explicitly in the report.
 
 ### ☐ Step 5 — Frontend
 - Build the thin vertical slice first: mic → Vosk → WebSocket → plain HTML showing partial text + article title.
+- **Theme chips:** after the words are in, show only the themes present among the candidates (scary, political, science, history, weird) and re-rank by the chosen theme. Theme = category keyword map, with `all-MiniLM-L6-v2` similarity to a theme description as fallback. Define the theme list in the report and measure its accuracy in Step 6.
 - Then apply one visualization from Section 6.
 
 ### ☐ Step 6 — Evaluation (backend + frontend)

@@ -4,5 +4,6 @@ Speech recognition project that queries 3-6 words from user then gets calculated
 ## Setup
 1. Download the Vosk model: https://alphacephei.com/vosk/models → `vosk-model-en-us-0.22-lgraph`
 2. Extract it into the repo root so you have `vosk-model-en-us-0.22-lgraph/` next to `asr.py` (it's gitignored — too large for GitHub).
-3. `pip install vosk sounddevice`
-4. Run `run_asr.bat` (or `python asr.py`).
+3. `pip install -r requirements.txt`
+4. Run `run_asr.bat` (or `python asr.py`). Use `python asr.py --backend lazy` for the slow baseline Wikipedia client.
+5. Tests: `python test_finalizer.py`, `python test_wiki.py` (add `--net` to hit Wikipedia).

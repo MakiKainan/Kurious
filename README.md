@@ -9,3 +9,5 @@ Speech recognition project that queries 3-6 words from user then gets calculated
    - The first run downloads the ~90MB MiniLM reranker model from Hugging Face (needs internet once; no login needed).
    - The reranker takes ~10–20s to load at startup; `[reranker ready]` is printed when done. The first search waits for it.
 5. Tests: `python test_finalizer.py`, `python test_wiki.py`, `python test_rerank.py` (add `--net` to hit Wikipedia and load the real model).
+
+Plan and notes live in `docs/`; search latency logs are written to `logs/`.

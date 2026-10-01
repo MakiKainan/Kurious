@@ -4,7 +4,7 @@ vosk-model-*/
 
 # runtime data
 cache.db*
-latency*.csv
+logs/
 
 # generated documents
 *.pdf

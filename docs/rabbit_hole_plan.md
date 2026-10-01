@@ -62,7 +62,7 @@ Each finalized word triggers a live article update — not a batch after all six
 - [x] Session reuse, retries, descriptive `User-Agent`, memory + sqlite (`cache.db`, 24h TTL) cache with stale fallback when offline.
 - [x] Wider pool: full query + one search per word, merged by pageid with `matched_by` (feeds Step 4 coverage).
 - [x] Flags `is_person`, `is_disambig`, `is_list` derived per candidate (inputs for the Step 4 filter and Step 5 themes).
-- [x] `asr.py` runs searches on a background worker; superseded queries are skipped/dropped; `--backend full|lazy`; every search logged to `latency.csv`.
+- [x] `asr.py` runs searches on a background worker; superseded queries are skipped/dropped; `--backend full|lazy`; every search logged to `logs/latency.csv`.
 - [x] Tests: `test_wiki.py` (`--net` for live).
 - Measured cold latency for "volcano iceland music": full ~2.8–3.0s (3–6 requests), lazy ~14–29s (42 requests). Cache hit ~0ms. Redo with real runs for the report.
 
@@ -74,13 +74,14 @@ Each finalized word triggers a live article update — not a batch after all six
 - [x] **Interestingness** `int` (report definition): `0.5·views + 0.25·has_image + 0.25·depth`, with `views = log10(views+1)/6` capped at 1 (1M views in ~60 days = 1.0) and `depth = min(1, bytes/50,000)`.
 - [x] **Obviousness penalty**: title equal to a spoken word or the whole query (e.g. "Volcano") is penalized, so the rabbit hole goes past the obvious.
 - [x] Score = `0.40·rel + 0.35·cov + 0.25·int − 0.15·obvious`. Weights are hand-set; tune and justify them against the Step 6 Precision@1 set.
-- [x] `asr.py` prints the top pick with its Wikipedia URL, score parts and 2 runners-up; `latency.csv` logs `wait_ms`, `search_ms`, `rerank_ms`, `total_ms`, `n_filtered`, `top_title`.
+- [x] `asr.py` prints the top pick with its Wikipedia URL, score parts and 2 runners-up; `logs/latency.csv` logs `wait_ms`, `search_ms`, `rerank_ms`, `total_ms`, `n_filtered`, `top_title`.
 - Measured: rerank of a fresh ~76-article pool 1.1–1.5s cold (MiniLM, 4 threads, 128 tokens; 256 tokens was ~4.5s), ~30ms when embeddings are cached. Model load ~11s of imports at startup, in the background. Sample top picks: "napoleon war russia" → French invasion of Russia; "shark ocean horror" → Monster Shark; "volcano iceland music" → Thrihnukagigur.
 
-### ☐ Step 5 — Frontend
-- Build the thin vertical slice first: mic → Vosk → WebSocket → plain HTML showing partial text + article title.
-- **Theme chips:** after the words are in, show only the themes present among the candidates (scary, political, science, history, weird) and re-rank by the chosen theme. Theme = category keyword map, with `all-MiniLM-L6-v2` similarity to a theme description as fallback. Define the theme list in the report and measure its accuracy in Step 6.
-- Then apply one visualization from Section 6.
+### ✅ Step 5 — Frontend
+- [x] Connected interactive 3D WebGL puzzle-globe frontend (`superfront end/Kurious.dc.html`) to live ASR and search pipeline.
+- [x] `server.py` hosts a WebSocket server on `ws://localhost:8765` and static HTTP server on `http://localhost:8000` (with auto-redirect from `/`).
+- [x] Live events stream in real time: `partial` (spinning globe impulse & flickering text), `query` (inked words on 3D tiles), `article` (prefetched top candidate + runner-up tiles), and `stopped` (rotates globe, lifts & slots tile, slides out editorial article card).
+- [x] Tested via `test_server.py`.
 
 ### ☐ Step 6 — Evaluation (backend + frontend)
 - Run ~50 queries, two raters judge "relevant/interesting or not," report Precision@1.

@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400;1,500&amp;family=EB+Garamond:ital,wght@0,400;0,500;1,400&amp;family=Pinyon+Script&amp;display=swap">
+<style>
+html,body{margin:0;height:100%;background:#faf8f3;color:#1b1f2a;overflow:hidden}
+a{color:#7a1f2b}
+a:hover{color:#1b1f2a}
+::selection{background:#ece2cc}
+@keyframes kFlicker{0%,100%{opacity:.78}50%{opacity:1}}
+@media (prefers-reduced-motion: reduce){*{animation:none !important}}
+</style>
+</helmet>
+<div style="position:fixed;inset:0;overflow:hidden;background:radial-gradient(120% 90% at 50% 38%, #fffdf9 0%, #faf8f3 55%, #f1ece2 100%);font-family:'EB Garamond',Georgia,serif;color:#1b1f2a">
+  <div ref="{{ grainRef }}" aria-hidden="true" style="position:absolute;inset:0;opacity:.2;pointer-events:none;mix-blend-mode:multiply"></div>
+  <div ref="{{ hostRef }}" role="img" aria-label="A porcelain puzzle globe, each piece engraved with a letter from a different writing system" style="position:absolute;inset:0"></div>
+
+  <header style="position:absolute;top:20px;left:32px;right:32px;display:flex;justify-content:space-between;align-items:flex-start;gap:24px;pointer-events:none">
+    <div style="display:flex;flex-direction:column;gap:0">
+      <h1 style="margin:0;font-family:'Pinyon Script',cursive;font-weight:400;font-size:50px;line-height:1.1;color:#1b1f2a">Kurious</h1>
+      <div style="font-variant-caps:all-small-caps;letter-spacing:.09em;font-size:15px;color:#6b6f78;padding-left:6px;white-space:nowrap">a voice-driven Wikipedia explorer</div>
+    </div>
+    <div style="pointer-events:auto;display:flex;align-items:center;gap:8px;font-variant-caps:all-small-caps;letter-spacing:.1em;font-size:15px;color:#6b6f78;padding-top:18px;white-space:nowrap;flex-shrink:0">
+      <sc-if value="{{ isLive }}" hint-placeholder-val="{{ false }}">
+        <span style="width:7px;height:7px;border-radius:50%;background:#7a1f2b"></span>
+        <span style="color:#1b1f2a">connected</span>
+      </sc-if>
+      <sc-if value="{{ isDemo }}" hint-placeholder-val="{{ false }}">
+        <span style="width:6px;height:6px;border-radius:50%;border:1px solid #6b6f78"></span>
+        <button onClick="{{ reconnect }}" title="Try ws://localhost:8765 again" style="background:none;border:0;padding:0;font:inherit;letter-spacing:inherit;font-variant-caps:all-small-caps;color:#6b6f78;cursor:pointer;white-space:nowrap" style-hover="color:#7a1f2b">demo mode</button>
+      </sc-if>
+      <sc-if value="{{ isConnecting }}" hint-placeholder-val="{{ true }}">
+        <span style="font-style:italic">connecting…</span>
+      </sc-if>
+    </div>
+  </header>
+
+  <div aria-live="polite" style="position:absolute;left:{{ lineLeft }};top:{{ lineTop }};translate:-50% 0;opacity:{{ lineOpacity }};transition:left 1.2s ease-in-out, top 1.2s ease-in-out, opacity .6s ease-in-out;width:{{ lineWidth }};display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center;pointer-events:none">
+    <sc-if value="{{ showPrompt }}" hint-placeholder-val="{{ true }}">
+      <div style="font-family:'Pinyon Script',cursive;font-size:36px;line-height:1.2;color:#6b6f78">Speak, and follow the thread…</div>
+    </sc-if>
+    <div style="display:flex;flex-wrap:wrap;justify-content:center;gap:2px 10px;font-family:'Cormorant Garamond',serif;font-size:32px;line-height:1.25">
+      <sc-for list="{{ tokens }}" as="tok" hint-placeholder-count="0">
+        <sc-if value="{{ tok.final }}" hint-placeholder-val="{{ true }}"><span style="color:#1b1f2a;font-weight:500">{{ tok.text }}</span></sc-if>
+        <sc-if value="{{ tok.partial }}" hint-placeholder-val="{{ false }}"><span style="color:#6b6f78;font-style:italic;animation:kFlicker 1.9s ease-in-out infinite">{{ tok.text }}</span></sc-if>
+      </sc-for>
+    </div>
+  </div>
+
+  <div ref="{{ hereRef }}" aria-hidden="true" style="position:absolute;left:0;top:0;opacity:0;transition:opacity 1s ease-in-out;pointer-events:none;font-family:'Pinyon Script',cursive;font-size:30px;line-height:1;color:#7a1f2b;white-space:nowrap">you are here</div>
+
+  <button ref="{{ alsoRef0 }}" onClick="{{ pickAlso0 }}" style="position:absolute;left:0;top:0;opacity:0;pointer-events:none;transition:opacity .8s ease-in-out;background:rgba(255,253,249,.9);border:0;border-radius:4px;box-shadow:0 2px 10px -4px rgba(60,48,30,.25);padding:4px 10px;font-family:'Cormorant Garamond',serif;font-style:italic;font-size:19px;color:#4a4e57;cursor:pointer;white-space:nowrap;display:flex;align-items:baseline;gap:6px" style-hover="color:#7a1f2b"><span style="font-style:normal;font-variant-caps:all-small-caps;letter-spacing:.08em;font-size:15px;color:#6b6f78">cf.</span><span>{{ also0 }}</span></button>
+  <button ref="{{ alsoRef1 }}" onClick="{{ pickAlso1 }}" style="position:absolute;left:0;top:0;opacity:0;pointer-events:none;transition:opacity .8s ease-in-out;background:rgba(255,253,249,.9);border:0;border-radius:4px;box-shadow:0 2px 10px -4px rgba(60,48,30,.25);padding:4px 10px;font-family:'Cormorant Garamond',serif;font-style:italic;font-size:19px;color:#4a4e57;cursor:pointer;white-space:nowrap;display:flex;align-items:baseline;gap:6px" style-hover="color:#7a1f2b"><span style="font-style:normal;font-variant-caps:all-small-caps;letter-spacing:.08em;font-size:15px;color:#6b6f78">cf.</span><span>{{ also1 }}</span></button>
+
+  <aside role="region" aria-label="Selected article" aria-live="polite" style="position:absolute;left:{{ cardLeft }};right:{{ cardRight }};top:{{ cardTop }};bottom:{{ cardBottom }};width:{{ cardWidth }};max-height:{{ cardMaxH }};overflow:auto;box-sizing:border-box;translate:{{ cardTranslate }};opacity:{{ cardOpacity }};pointer-events:{{ cardEvents }};transition:opacity .6s ease-in-out, translate 1s ease-in-out;background:#fffdf9;border:1px solid #d9d4c9;box-shadow:0 22px 44px -28px rgba(60,48,30,.35);padding:28px 36px 24px">
+    <div style="display:flex;align-items:center;gap:12px;font-variant-caps:all-small-caps;letter-spacing:.12em;font-size:14px;color:#6b6f78">
+      <span>the thread leads to</span>
+      <span style="flex:1;height:1px;background:#d9d4c9"></span>
+    </div>
+    <div style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:18px;align-items:start;margin-top:10px">
+      <div>
+        <h2 style="margin:0;font-family:'Cormorant Garamond',serif;font-style:italic;font-weight:500;font-size:42px;line-height:1.05;color:#1b1f2a;text-wrap:balance">{{ art.title }}</h2>
+        <div style="margin-top:8px;font-variant-caps:all-small-caps;letter-spacing:.07em;font-size:18px;line-height:1.3;color:#6b6f78;font-variant-numeric:oldstyle-nums">{{ art.description }}</div>
+      </div>
+      <div style="width:120px;height:120px;padding:3px;border:1px solid #d9d4c9;background:#fff;box-sizing:content-box">
+        <sc-if value="{{ hasThumb }}" hint-placeholder-val="{{ false }}">
+          <img ref="{{ thumbRef }}" alt="{{ thumbAlt }}" style="display:block;width:120px;height:120px;object-fit:cover;filter:sepia(.08)">
+        </sc-if>
+        <sc-if value="{{ noThumb }}" hint-placeholder-val="{{ true }}">
+          <div style="width:120px;height:120px;display:flex;align-items:center;justify-content:center;background:repeating-linear-gradient(135deg,#f5f1ea 0 6px,#ede8de 6px 12px);font-family:ui-monospace,Menlo,monospace;font-size:10px;color:#6b6f78">thumbnail</div>
+        </sc-if>
+      </div>
+    </div>
+    <div style="height:1px;background:#d9d4c9;margin:12px 0 10px"></div>
+    <p style="margin:0;font-size:19.5px;line-height:1.55;color:#1b1f2a;display:-webkit-box;-webkit-line-clamp:{{ clampLines }};-webkit-box-orient:vertical;overflow:hidden;text-wrap:pretty;hyphens:auto;font-variant-numeric:oldstyle-nums"><span style="float:left;font-family:'Cormorant Garamond',serif;font-size:3.4em;line-height:.8;padding:5px 7px 0 0;color:#7a1f2b">{{ dropCap }}</span>{{ extractRest }}</p>
+    <a href="{{ art.url }}" target="_blank" rel="noopener" style="display:inline-flex;margin-top:8px;font-variant-caps:all-small-caps;letter-spacing:.1em;font-size:16px;color:#7a1f2b;text-decoration:none;border-bottom:1px solid #dcc6c3">Read on Wikipedia →</a>
+    <div style="margin-top:12px;padding-top:10px;border-top:1px solid #d9d4c9;display:flex;flex-wrap:wrap;gap:8px">
+      <span style="display:inline-flex;align-items:baseline;gap:6px;border:1px solid #d9d4c9;padding:2px 9px;font-size:15.5px"><em>relevance<sup style="font-style:normal;color:#7a1f2b;font-size:.65em;margin-left:1px">1</sup></em><span style="font-variant-numeric:oldstyle-nums">{{ relS }}</span></span>
+      <span style="display:inline-flex;align-items:baseline;gap:6px;border:1px solid #d9d4c9;padding:2px 9px;font-size:15.5px"><em>coverage<sup style="font-style:normal;color:#7a1f2b;font-size:.65em;margin-left:1px">2</sup></em><span style="font-variant-numeric:oldstyle-nums">{{ covS }}</span></span>
+      <span style="display:inline-flex;align-items:baseline;gap:6px;border:1px solid #d9d4c9;padding:2px 9px;font-size:15.5px"><em>interest<sup style="font-style:normal;color:#7a1f2b;font-size:.65em;margin-left:1px">3</sup></em><span style="font-variant-numeric:oldstyle-nums">{{ intS }}</span></span>
+    </div>
+    <sc-if value="{{ roomy }}" hint-placeholder-val="{{ true }}"><div style="margin-top:9px;font-size:13px;line-height:1.45;color:#6b6f78;text-wrap:pretty"><sup>1</sup> fit to the phrase as a whole · <sup>2</sup> share of your words it accounts for · <sup>3</sup> how rewarding the rabbit hole</div></sc-if>
+    <sc-if value="{{ roomy }}" hint-placeholder-val="{{ true }}"><div style="margin-top:10px;font-variant-caps:all-small-caps;letter-spacing:.08em;font-size:14px;color:#6b6f78">from the words <span style="font-variant-caps:normal;letter-spacing:0;font-style:italic;color:#1b1f2a;font-size:15.5px">{{ sourceWords }}</span></div></sc-if>
+  </aside>
+
+  <div style="position:absolute;left:32px;bottom:22px;display:flex;flex-wrap:wrap;align-items:center;gap:12px 18px;font-variant-caps:all-small-caps;letter-spacing:.1em;font-size:15px;color:#6b6f78;z-index:20;pointer-events:auto">
+    <sc-if value="{{ isPaused }}" hint-placeholder-val="{{ false }}">
+      <button onClick="{{ togglePause }}" style="display:inline-flex;align-items:center;gap:8px;padding:9px 20px;background:#7a1f2b;border:1.5px solid #7a1f2b;border-radius:6px;box-shadow:0 4px 14px rgba(122,31,43,.32);font:inherit;font-weight:600;letter-spacing:.12em;font-variant-caps:all-small-caps;color:#fffdf9;cursor:pointer;white-space:nowrap;transition:all .18s ease" style-hover="background:#5e141e;border-color:#5e141e">
+        <span style="font-size:13px">▶</span>
+        <span>Resume Listening</span>
+      </button>
+    </sc-if>
+    <sc-if value="{{ notPaused }}" hint-placeholder-val="{{ true }}">
+      <button onClick="{{ togglePause }}" style="display:inline-flex;align-items:center;gap:8px;padding:9px 20px;background:#fffdf9;border:1.5px solid #7a1f2b;border-radius:6px;box-shadow:0 3px 10px rgba(60,48,30,.12);font:inherit;font-weight:600;letter-spacing:.12em;font-variant-caps:all-small-caps;color:#7a1f2b;cursor:pointer;white-space:nowrap;transition:all .18s ease" style-hover="background:#7a1f2b;color:#fffdf9">
+        <span style="font-size:13px">⏸</span>
+        <span>Pause Listening</span>
+      </button>
+    </sc-if>
+    <button onClick="{{ handleStop }}" title="Stop and reveal current article" style="display:inline-flex;align-items:center;gap:8px;padding:9px 20px;background:#fffdf9;border:1.5px solid #1b1f2a;border-radius:6px;box-shadow:0 3px 10px rgba(60,48,30,.12);font:inherit;font-weight:600;letter-spacing:.12em;font-variant-caps:all-small-caps;color:#1b1f2a;cursor:pointer;white-space:nowrap;transition:all .18s ease" style-hover="background:#1b1f2a;color:#fffdf9">
+      <span style="font-size:12px">⏹</span>
+      <span>Stop &amp; Reveal</span>
+    </button>
+    <span style="white-space:nowrap;font-size:13.5px;color:#6b6f78">
+      <kbd style="font-family:inherit;border:1px solid #d9d4c9;padding:2px 7px;border-radius:3px;background:#fff;color:#1b1f2a;box-shadow:0 1px 2px rgba(0,0,0,.06)">space</kbd> {{ pauseVerb }}
+    </span>
+    <sc-if value="{{ isDemo }}" hint-placeholder-val="{{ false }}">
+      <span style="color:#d9d4c9">|</span>
+      <button onClick="{{ replay }}" style="background:none;border:0;border-bottom:1px solid #d9d4c9;padding:1px 0;font:inherit;letter-spacing:inherit;font-variant-caps:all-small-caps;color:#1b1f2a;cursor:pointer;white-space:nowrap;flex-shrink:0" style-hover="color:#7a1f2b">replay demo</button>
+      <button onClick="{{ nextSession }}" style="background:none;border:0;border-bottom:1px solid #d9d4c9;padding:1px 0;font:inherit;letter-spacing:inherit;font-variant-caps:all-small-caps;color:#1b1f2a;cursor:pointer;white-space:nowrap;flex-shrink:0" style-hover="color:#7a1f2b">next session</button>
+      <span style="white-space:nowrap">session <span style="font-variant-numeric:oldstyle-nums">{{ sessionNo }}</span></span>
+    </sc-if>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;quality&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;light&quot;,&quot;balanced&quot;,&quot;high&quot;],&quot;default&quot;:&quot;balanced&quot;,&quot;tsType&quot;:&quot;'light'|'balanced'|'high'&quot;,&quot;section&quot;:&quot;Rendering&quot;},&quot;accent&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;gold leaf&quot;,&quot;oxblood&quot;],&quot;default&quot;:&quot;gold leaf&quot;,&quot;tsType&quot;:&quot;'gold leaf'|'oxblood'&quot;,&quot;section&quot;:&quot;Highlight&quot;},&quot;slotFlourish&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Highlight&quot;}}">
+class Component extends DCLogic {
+  state = { status: 'connecting', finals: [], partial: '', article: null, also: [], words: [], revealed: false, swapping: false, paused: false, session: 0, vw: 1200, vh: 800, layout: null };
+  hostRef = React.createRef(); grainRef = React.createRef(); hereRef = React.createRef();
+  alsoRef0 = React.createRef(); alsoRef1 = React.createRef();
+  thumbRef = el => { this.thumbEl = el; this.syncThumb(); };
+  syncThumb() { const el = this.thumbEl, src = this.state.article && this.state.article.thumbnail; if (el && src && el.getAttribute('src') !== src) el.setAttribute('src', src); }
+  pending = null; summaries = {}; cardCache = {};
+  demo = { active: false, t: 0, idx: 0, fired: 0, tl: null };
+
+  sessions = [
+    { words: ['napoleon', 'war', 'russia', 'winter'],
+      interim: { 1: { title: 'Napoleonic Wars' }, 2: { title: 'French invasion of Russia' } },
+      article: { title: 'French invasion of Russia', url: 'https://en.wikipedia.org/wiki/French_invasion_of_Russia', description: '1812 campaign of the Napoleonic Wars',
+        extract: 'The French invasion of Russia, known in Russia as the Patriotic War of 1812, was launched by Napoleon to compel the Russian Empire back into the Continental Blockade of Britain. Some 600,000 men crossed the Neman in June; after the burning of Moscow and an early, bitter winter, fewer than a fifth came home.',
+        thumbnail: '', parts: { rel: 0.57, cov: 1.0, int: 0.90 }, also: ['French occupation of Moscow', 'Attrition warfare against Napoleon'] } },
+    { words: ['volcano', 'iceland', 'cave', 'music'],
+      interim: { 1: { title: 'Eyjafjallajökull' }, 2: { title: 'Þríhnúkagígur' } },
+      article: { title: 'Þríhnúkagígur', url: 'https://en.wikipedia.org/wiki/%C3%9Er%C3%ADhn%C3%BAkag%C3%ADgur', description: 'Dormant volcano in southwest Iceland',
+        extract: 'Þríhnúkagígur is a dormant volcano near Reykjavík whose magma chamber, unusually, never refilled after its last eruption some four thousand years ago. Visitors descend 120 metres by an open window-cleaner’s lift into the vast chamber, whose resonant walls have drawn musicians to perform inside the mountain.',
+        thumbnail: '', parts: { rel: 0.61, cov: 0.75, int: 0.94 }, also: ['Eyjafjallajökull', 'Lava tube'] } },
+    { words: ['shark', 'ocean', 'horror', 'film'],
+      interim: { 1: { title: 'Great white shark' }, 2: { title: 'Jaws (film)' } },
+      article: { title: 'Monster Shark', url: 'https://en.wikipedia.org/wiki/Monster_Shark', description: '1984 Italian science-fiction horror film',
+        extract: 'Monster Shark, released in Italy as Shark: Rosso nell’oceano and elsewhere as Devil Fish, is a 1984 science-fiction horror film directed by Lamberto Bava. A marine biologist and a dolphin trainer investigate mutilated bodies off the Florida coast and uncover a creature engineered to be part shark, part octopus.',
+        thumbnail: '', parts: { rel: 0.52, cov: 1.0, int: 0.97 }, also: ['Jaws (film)', 'Sharksploitation'] } }
+  ];
+
+  componentDidMount() {
+    this.reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const svg = "<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 .36 0 0 0 0 .31 0 0 0 0 .22 0 0 0 .55 0'/></filter><rect width='100%' height='100%' filter='url(#n)'/></svg>";
+    if (this.grainRef.current) this.grainRef.current.style.backgroundImage = 'url("data:image/svg+xml;utf8,' + encodeURIComponent(svg) + '")';
+    this.onResize = () => this.setState({ vw: window.innerWidth, vh: window.innerHeight });
+    this.onResize(); window.addEventListener('resize', this.onResize);
+    this.onKey = e => {
+      if (e.code !== 'Space') return;
+      const tag = (document.activeElement && document.activeElement.tagName) || '';
+      if (/INPUT|TEXTAREA/.test(tag)) return;
+      e.preventDefault(); this.togglePause();
+    };
+    window.addEventListener('keydown', this.onKey);
+    window.kurious = { handleEvent: m => this.handleEvent(m) };
+    let last = performance.now();
+    const loop = now => { if (this.dead) return; const dt = Math.min(0.1, (now - last) / 1000); last = now; this.tickDemo(dt); this.raf = requestAnimationFrame(loop); };
+    this.raf = requestAnimationFrame(loop);
+    this.initScene().catch(err => console.warn('[kurious] scene failed', err));
+    this.connect();
+  }
+  componentWillUnmount() {
+    this.dead = true; cancelAnimationFrame(this.raf);
+    window.removeEventListener('resize', this.onResize); window.removeEventListener('keydown', this.onKey);
+    if (this.ws) this.ws.close(); if (this.sceneApi) this.sceneApi.dispose();
+  }
+  componentDidUpdate(pp) {
+    this.syncThumb();
+    const S = this.sceneApi; if (!S) return;
+    if (pp.accent !== this.props.accent) S.setAccent(this.props.accent);
+    if (pp.quality !== this.props.quality) S.setQuality(this.props.quality);
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  //  EVENT CONTRACT — the only entry point for the backend.
+  //  partial · query · article · stopped · listening
+  //  (also exposed as window.kurious.handleEvent)
+  // ─────────────────────────────────────────────────────────────
+  handleEvent(msg) {
+    if (!msg || !msg.type) return;
+    const S = this.sceneApi;
+    switch (msg.type) {
+      case 'partial': {
+        if (this.state.revealed || this.state.article) this.release();
+        const prev = this.state.partial || '', next = String(msg.text || '');
+        let i = 0; while (i < prev.length && i < next.length && prev[i] === next[i]) i++;
+        const changed = (prev.length - i) + (next.length - i);
+        if (S && changed) S.impulse(Math.min(1, changed / 10));
+        this.setState({ partial: next });
+        break;
+      }
+      case 'query':
+        this.setState({ finals: Array.isArray(msg.words) ? msg.words.slice() : [] });
+        if (msg.new && S) S.inkWord(String(msg.new));
+        break;
+      case 'article':
+        this.pending = msg; this.prefetch(msg.title);
+        break;
+      case 'stopped':
+        this.setState({ paused: true });
+        if (this.pending) this.reveal(this.pending);
+        break;
+      case 'listening':
+        this.release(); this.pending = null;
+        this.setState({ finals: [], partial: '', paused: false });
+        break;
+      case 'paused':
+        this.setState({ paused: !!msg.paused });
+        break;
+    }
+  }
+  // ─────────────────────────────────────────────────────────────
+
+  wikiUrl(t) { return 'https://en.wikipedia.org/wiki/' + encodeURIComponent(String(t || '').replace(/ /g, '_')); }
+  normArticle(a) {
+    return { title: a.title || 'Untitled', url: a.url || this.wikiUrl(a.title), description: a.description || '', extract: a.extract || '', thumbnail: a.thumbnail || '', parts: a.parts || null };
+  }
+  reveal(a) {
+    const art = this.normArticle(a);
+    this.cardCache = {};
+    this.setState({ article: art, also: (a.also || []).slice(0, 2), words: this.state.finals.slice(), swapping: false });
+    this.fillFromSummary(art.title);
+    (a.also || []).slice(0, 2).forEach(t => this.prefetch(t));
+    if (this.sceneApi) this.sceneApi.reveal(); else this.setState({ revealed: true });
+  }
+  release() {
+    if (this.sceneApi) this.sceneApi.release();
+    this.setState({ revealed: false, article: null === this.state.article ? null : this.state.article });
+    clearTimeout(this.clearT);
+    this.clearT = setTimeout(() => { if (!this.state.revealed) this.setState({ article: null }); }, 900);
+  }
+  prefetch(title) {
+    if (!title) return Promise.resolve(null);
+    if (!this.summaries[title]) {
+      this.summaries[title] = fetch('https://en.wikipedia.org/api/rest_v1/page/summary/' + encodeURIComponent(String(title).replace(/ /g, '_')))
+        .then(r => r.ok ? r.json() : null).catch(() => null);
+    }
+    return this.summaries[title];
+  }
+  async fillFromSummary(title) {
+    const j = await this.prefetch(title);
+    if (!j || this.dead) return;
+    this.setState(s => (s.article && s.article.title === title) ? { article: {
+      ...s.article,
+      thumbnail: s.article.thumbnail || (j.thumbnail && j.thumbnail.source) || '',
+      extract: s.article.extract || j.extract || '',
+      description: s.article.description || j.description || '',
+      url: s.article.url || (j.content_urls && j.content_urls.desktop && j.content_urls.desktop.page) || ''
+    } } : null);
+  }
+  pickAlso(i) {
+    const s = this.state, t = s.also[i];
+    if (!t || !s.article || s.swapping) return;
+    const also = s.also.slice(); also[i] = s.article.title;
+    this.cardCache[s.article.title] = s.article;
+    const art = this.cardCache[t] || this.normArticle({ title: t });
+    this.setState({ swapping: true });
+    if (this.sceneApi) this.sceneApi.swap(i);
+    setTimeout(() => { this.setState({ article: art, also, swapping: false }); this.fillFromSummary(t); }, 380);
+  }
+
+  connect() {
+    if (this.ws) return;
+    let ws;
+    try { ws = new WebSocket('ws://localhost:8765'); } catch (e) { this.startDemo(); return; }
+    this.ws = ws; let opened = false;
+    const fallback = setTimeout(() => { if (!opened) this.startDemo(); }, 1500);
+    ws.onopen = () => { opened = true; clearTimeout(fallback); this.demo.active = false; this.setState({ status: 'live', paused: false }); this.handleEvent({ type: 'listening' }); };
+    ws.onmessage = e => { let m; try { m = JSON.parse(e.data); } catch (err) { return; } this.handleEvent(m); };
+    ws.onerror = () => {};
+    ws.onclose = () => { clearTimeout(fallback); this.ws = null; if (this.dead) return; if (opened) this.handleEvent({ type: 'listening' }); this.startDemo(); };
+  }
+
+  buildTimeline(s) {
+    let seed = 11 + s.words.length * 7 + s.words[0].length;
+    const r = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+    const ev = [[0, { type: 'listening' }]]; let t = 700;
+    s.words.forEach((w, wi) => {
+      const base = s.words.slice(0, wi).join(' ') + (wi ? ' ' : '');
+      const cuts = [...new Set([Math.min(2, w.length), Math.ceil(w.length * 0.6), w.length])];
+      cuts.forEach(n => { t += 170 + r() * 170; ev.push([t, { type: 'partial', text: base + w.slice(0, n) }]); });
+      t += 240; ev.push([t, { type: 'query', words: s.words.slice(0, wi + 1), new: w }]);
+      if (s.interim[wi]) { t += 120; ev.push([t, Object.assign({ type: 'article' }, s.interim[wi])]); }
+      t += 140;
+    });
+    t += 220; ev.push([t, Object.assign({ type: 'article' }, s.article)]);
+    t += 650; ev.push([t, { type: 'stopped' }]);
+    return { events: ev, length: 15000 };
+  }
+  startDemo() {
+    if (this.demo.active || this.dead) return;
+    this.demo.active = true; this.setState({ status: 'demo' });
+    this.loadSession(this.demo.idx);
+  }
+  loadSession(i) {
+    const d = this.demo; d.idx = i; d.tl = this.buildTimeline(this.sessions[i]); d.t = 0; d.fired = 0;
+    this.setState({ session: i, paused: false });
+  }
+  tickDemo(dt) {
+    const d = this.demo;
+    if (!d.active || !d.tl || this.state.paused) return;
+    d.t += dt * 1000;
+    const ev = d.tl.events;
+    while (d.fired < ev.length && ev[d.fired][0] <= d.t) this.handleEvent(ev[d.fired++][1]);
+    if (d.t >= d.tl.length) this.loadSession((d.idx + 1) % this.sessions.length);
+  }
+  sendCmd(action) {
+    if (this.ws && this.ws.readyState === 1) {
+      this.ws.send(JSON.stringify({ action }));
+    }
+  }
+  togglePause() {
+    if (this.demo.active) {
+      this.setState(s => ({ paused: !s.paused }));
+    } else {
+      this.sendCmd('toggle_pause');
+    }
+  }
+  handleStop() {
+    if (this.demo.active) {
+      if (this.pending) this.reveal(this.pending);
+      this.setState({ paused: true });
+    } else {
+      this.sendCmd('stop');
+    }
+  }
+
+  async initScene() {
+    const THREE = await import('https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js');
+    const host = this.hostRef.current;
+    if (this.dead || !host) return;
+    const self = this, reduced = this.reduced;
+    const R = 2, DEPTH = 0.1, BEV = 0.024, FOV = 60, EL = 0.14, HALF = Math.PI / 2, TAU = Math.PI * 2;
+    const dprFor = q => Math.min(window.devicePixelRatio || 1, q === 'light' ? 1 : q === 'high' ? 2 : 1.5);
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
+    renderer.setPixelRatio(dprFor(this.props.quality || 'balanced'));
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.toneMapping = THREE.NeutralToneMapping || THREE.ACESFilmicToneMapping;
+    renderer.setClearColor(0x000000, 0);
+    const cv = renderer.domElement; cv.style.cssText = 'display:block;width:100%;height:100%;outline:none';
+    host.appendChild(cv);
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(FOV, 1, 0.1, 100);
+    scene.add(new THREE.HemisphereLight(0xffffff, 0xe8e2d6, 1.5));
+    const key = new THREE.DirectionalLight(0xfff5e6, 2.1); key.position.set(-4, 6, 5); scene.add(key);
+    const rim = new THREE.DirectionalLight(0xf6ecdb, 1.8); rim.position.set(5, 2, -6); scene.add(rim);
+    const fill = new THREE.DirectionalLight(0xffffff, 0.35); fill.position.set(4, -2, 6); scene.add(fill);
+
+    const root = new THREE.Group(), tilt = new THREE.Group(), spin = new THREE.Group();
+    scene.add(root); root.add(tilt); tilt.add(spin);
+    spin.add(new THREE.Mesh(new THREE.SphereGeometry(R - DEPTH - BEV * 0.6, 48, 32), new THREE.MeshStandardMaterial({ color: 0x9a9384, roughness: 1 })));
+
+    const mkCanvas = (s) => { const c = document.createElement('canvas'); c.width = c.height = s; return c; };
+    const sc = mkCanvas(256), sx = sc.getContext('2d');
+    const sg = sx.createRadialGradient(128, 128, 0, 128, 128, 128);
+    sg.addColorStop(0, 'rgba(60,46,28,0.5)'); sg.addColorStop(0.4, 'rgba(60,46,28,0.2)'); sg.addColorStop(1, 'rgba(60,46,28,0)');
+    sx.fillStyle = sg; sx.fillRect(0, 0, 256, 256);
+    const shadowTex = new THREE.CanvasTexture(sc); shadowTex.colorSpace = THREE.SRGBColorSpace;
+    const shadow = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: shadowTex, transparent: true, depthWrite: false, toneMapped: false }));
+    shadow.rotation.x = -HALF; shadow.position.y = -R - 0.42; scene.add(shadow);
+
+    let seed = 7;
+    const rnd = () => { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; };
+    const bands = [[-90, -60, 7], [-60, -30, 14], [-30, 0, 14], [0, 30, 14], [30, 60, 14], [60, 90, 7]].map(([a, b, n]) => {
+      const B = { lat0: a * Math.PI / 180, lat1: b * Math.PI / 180, n };
+      B.dLat = B.lat1 - B.lat0; B.dLon = TAU / n; B.cm = Math.cos((B.lat0 + B.lat1) / 2);
+      B.W = B.dLon * B.cm; B.H = B.dLat; B.vs = Array.from({ length: n }, () => rnd() < 0.5 ? 1 : -1);
+      return B;
+    });
+    const hs = bands.map((B, b) => (b >= 1 && b <= 3) ? Array.from({ length: B.n }, () => rnd() < 0.5 ? 1 : -1) : null);
+    const missing = new Set(['5:0', '5:1', '4:1']);
+    const GLYPHS = ['Ω','Ж','ع','अ','ש','ლ','Ա','ᚠ','한','あ','文','ก','த','ক','ᐃ','ሀ','ཀ','Ꭰ','λ','Я','ب','क','ת','ქ','Բ','ᚱ','글','カ','書','ข','ம','অ','ᑭ','ለ','ག','Ꮳ','Φ','Ψ','Ю','ف','ज','א','ბ','Գ','ᛟ','ㅎ','の','字','ค','ழ','গ','ᓄ','መ','ང','Σ','Д','ك','ठ','ל','დ','Ե','ᚷ','ん','語','ง','ய','ঘ','ሰ','ཅ','Ξ','Щ','ה','ન','ਅ','ಕ','ഥ','ස','ក','ມ','ⵣ','ߒ','Ћ'];
+    const ARC = []; for (let j = 0; j <= 12; j++) { const a = 4.03 + (-0.895 - 4.03) * j / 12; ARC.push([0.085 * Math.cos(a), 0.12 + 0.085 * Math.sin(a)]); }
+    function edge(out, p0, p1, sign, ka, kp, steps) {
+      const dx = p1[0] - p0[0], dy = p1[1] - p0[1], L = Math.hypot(dx, dy), ux = dx / L, uy = dy / L, nx = uy, ny = -ux;
+      const P = (a, v) => out.push(new THREE.Vector2(p0[0] + ux * a + nx * v, p0[1] + uy * a + ny * v));
+      if (!sign) { for (let i = 0; i < steps; i++) P(L * i / steps, 0); return; }
+      const m = L / 2, a0 = m - 0.1 * ka, a1 = m + 0.1 * ka;
+      for (let i = 0; i < 3; i++) P(a0 * i / 3, 0);
+      P(a0, 0); for (const [u, v] of ARC) P(m + u * ka, sign * v * kp); P(a1, 0);
+      for (let i = 1; i < 3; i++) P(a1 + (L - a1) * i / 3, 0);
+    }
+    const Kh = lat => 1.25 * Math.min(bands[2].dLon * Math.cos(lat), bands[2].dLat);
+    const dirOf = (lat, lon) => new THREE.Vector3(Math.cos(lat) * Math.sin(lon), Math.sin(lat), Math.cos(lat) * Math.cos(lon));
+    const S_TEX = 160;
+    function drawTile(t, wa) {
+      const c = t.ctx, S = S_TEX;
+      c.globalAlpha = 1; c.fillStyle = t.base; c.fillRect(0, 0, S, S);
+      let s = t.vseed; const r = () => { s = (s * 16807) % 2147483647; return s / 2147483647; };
+      c.strokeStyle = 'rgba(140,128,108,0.08)'; c.lineWidth = 1;
+      for (let v = 0; v < 2; v++) { c.beginPath(); c.moveTo(r() * S, 0); c.bezierCurveTo(r() * S, S * 0.33, r() * S, S * 0.66, r() * S, S); c.stroke(); }
+      const g = c.createRadialGradient(S / 2, S / 2, S * 0.18, S / 2, S / 2, S * 0.6);
+      g.addColorStop(0, 'rgba(120,104,80,0)'); g.addColorStop(1, 'rgba(120,104,80,0.1)');
+      c.fillStyle = g; c.fillRect(0, 0, S, S);
+      c.textAlign = 'center'; c.textBaseline = 'middle';
+      const ga = 1 - wa;
+      if (ga > 0.01) {
+        c.font = t.gsize + 'px "EB Garamond","Noto Serif","Noto Sans",serif';
+        c.globalAlpha = ga; c.fillStyle = 'rgba(255,255,255,0.95)'; c.fillText(t.glyph, S / 2 + 1.6, S / 2 + 1.8);
+        c.fillStyle = 'rgba(27,31,42,0.86)'; c.fillText(t.glyph, S / 2, S / 2);
+      }
+      if (wa > 0.01 && t.word) {
+        let fs = 30; c.font = 'italic ' + fs + 'px "EB Garamond",serif';
+        const w = c.measureText(t.word).width, lim = t.fitW;
+        if (w > lim) { fs = fs * lim / w; c.font = 'italic ' + fs + 'px "EB Garamond",serif'; }
+        c.globalAlpha = wa; c.fillStyle = '#1b1f2a'; c.fillText(t.word, S / 2, S / 2);
+        c.fillStyle = 'rgba(122,31,43,0.55)'; c.fillRect(S / 2 - Math.min(w, lim) * 0.3, S / 2 + fs * 0.55, Math.min(w, lim) * 0.6, 1);
+      }
+      c.globalAlpha = 1; t.tex.needsUpdate = true;
+    }
+
+    const sideMat = new THREE.MeshStandardMaterial({ color: 0xf1ede5, roughness: 0.55 });
+    const tiles = [], gaps = [];
+    let gi = 0;
+    const tmp = new THREE.Vector3();
+    bands.forEach((B, b) => {
+      for (let i = 0; i < B.n; i++) {
+        const latC = (B.lat0 + B.lat1) / 2, lonC = B.dLon * (i + 0.5);
+        if (missing.has(b + ':' + i)) { const d = dirOf(latC, lonC); gaps.push({ dir: d, size: Math.min(B.W, B.H) }); continue; }
+        const W = B.W, H = B.H, pts = [], Kv = 1.25 * Math.min(W, H);
+        const topS = hs[b] ? hs[b][i] : 0, botS = (b > 0 && hs[b - 1]) ? -hs[b - 1][i] : 0;
+        const Kb = botS ? Kh(B.lat0) : 0, Kt = topS ? Kh(B.lat1) : 0;
+        edge(pts, [0, 0], [W, 0], botS, Kb * B.cm / Math.cos(B.lat0), Kb, 6);
+        edge(pts, [W, 0], [W, H], B.vs[i], Kv, Kv, 6);
+        edge(pts, [W, H], [0, H], topS, Kt * B.cm / Math.cos(B.lat1), Kt, 6);
+        edge(pts, [0, H], [0, 0], -B.vs[(i - 1 + B.n) % B.n], Kv, Kv, 6);
+        const g = new THREE.ExtrudeGeometry(new THREE.Shape(pts), { depth: DEPTH, bevelEnabled: true, bevelThickness: BEV, bevelSize: Math.min(W, H) * 0.03, bevelSegments: 2, steps: 1, curveSegments: 1 });
+        const pos = g.attributes.position, uv = g.attributes.uv, n = pos.count;
+        const scl = 0.968, cx = W / 2, cy = H / 2, S = Math.max(W, H) * 1.35, outerZ = DEPTH + BEV;
+        const center = dirOf(latC, lonC).multiplyScalar(R);
+        const rad = new Float32Array(n * 3), zs = new Float32Array(n);
+        for (let k = 0; k < n; k++) {
+          const x = pos.getX(k), y = pos.getY(k), z = pos.getZ(k);
+          const xs = cx + (x - cx) * scl, ys = cy + (y - cy) * scl;
+          const lat = Math.max(-HALF, Math.min(HALF, B.lat0 + ys)), lon = B.dLon * i + xs / B.cm;
+          const r = R - outerZ + z, cl = Math.cos(lat);
+          tmp.set(cl * Math.sin(lon), Math.sin(lat), cl * Math.cos(lon));
+          rad[k * 3] = tmp.x; rad[k * 3 + 1] = tmp.y; rad[k * 3 + 2] = tmp.z; zs[k] = z;
+          tmp.multiplyScalar(r);
+          pos.setXYZ(k, tmp.x - center.x, tmp.y - center.y, tmp.z - center.z);
+          uv.setXY(k, (x - cx) / S + 0.5, (y - cy) / S + 0.5);
+        }
+        g.computeVertexNormals();
+        const nr = g.attributes.normal, capN = g.groups[0] ? g.groups[0].count : 0;
+        for (let k = 0; k < capN; k++) { const sgn = zs[k] > DEPTH / 2 ? 1 : -1; nr.setXYZ(k, rad[k * 3] * sgn, rad[k * 3 + 1] * sgn, rad[k * 3 + 2] * sgn); }
+        const canvas = mkCanvas(S_TEX);
+        const tex = new THREE.CanvasTexture(canvas); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 4;
+        const mat = new THREE.MeshStandardMaterial({ map: tex, roughness: 0.4, metalness: 0 });
+        const mesh = new THREE.Mesh(g, [mat, sideMat]); mesh.position.copy(center); spin.add(mesh);
+        const tone = Math.round(246 + rnd() * 9);
+        const t = { mesh, mat, canvas, ctx: canvas.getContext('2d'), tex, glyph: GLYPHS[gi++ % GLYPHS.length], home: center.clone(), dir: center.clone().normalize(),
+          lat: latC, lon: lonC, b, size: Math.min(W, H), phase: rnd() * TAU, vseed: 1 + Math.floor(rnd() * 1e6),
+          base: 'rgb(' + Math.min(255, tone + 2) + ',' + Math.min(255, tone + 1) + ',' + (tone - 3) + ')',
+          gsize: Math.round(58 * Math.min(1, (W / S) / 0.62)), fitW: (W / S) * S_TEX * 0.82, ink: null, inkA: 0, word: '' };
+        drawTile(t, 0); tiles.push(t);
+      }
+    });
+    if (document.fonts) document.fonts.ready.then(() => { if (!self.dead) tiles.forEach(t => drawTile(t, t.inkA)); });
+    if (document.fonts) document.fonts.load('italic 30px "EB Garamond"').catch(() => {});
+
+    const edgeMat = new THREE.MeshStandardMaterial({ color: 0xb8963e, metalness: 0.7, roughness: 0.32 });
+    const gc = mkCanvas(128), gx = gc.getContext('2d'), glowTex = new THREE.CanvasTexture(gc); glowTex.colorSpace = THREE.SRGBColorSpace;
+    const glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, transparent: true, depthWrite: false, opacity: 0, toneMapped: false }));
+    glow.scale.set(1.7, 1.7, 1); spin.add(glow);
+    function setAccent(name) {
+      const ox = name === 'oxblood';
+      edgeMat.color.setHex(ox ? 0x7a1f2b : 0xb8963e); edgeMat.metalness = ox ? 0.25 : 0.7; edgeMat.roughness = ox ? 0.42 : 0.32;
+      const col = ox ? '122,31,43' : '184,150,62';
+      gx.clearRect(0, 0, 128, 128);
+      const gg = gx.createRadialGradient(64, 64, 0, 64, 64, 64);
+      gg.addColorStop(0, 'rgba(' + col + ',' + (ox ? 0.28 : 0.5) + ')'); gg.addColorStop(0.5, 'rgba(' + col + ',0.12)'); gg.addColorStop(1, 'rgba(' + col + ',0)');
+      gx.fillStyle = gg; gx.fillRect(0, 0, 128, 128); glowTex.needsUpdate = true;
+    }
+    setAccent(this.props.accent);
+
+    const orbs = [0, 1].map(k => {
+      const src = tiles.find(t => t.b === 3 && Math.abs(t.lon - (1 + k * 3)) < 0.3) || tiles[20 + k];
+      const g = src.mesh.geometry.clone();
+      g.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(src.dir, new THREE.Vector3(0, 0, 1)));
+      const c = mkCanvas(S_TEX), tx = c.getContext('2d');
+      const faux = { ctx: tx, tex: null, base: '#ece7de', vseed: 99 + k, gsize: src.gsize, glyph: k ? '¶' : '§', fitW: 80 };
+      faux.tex = new THREE.CanvasTexture(c); faux.tex.colorSpace = THREE.SRGBColorSpace; drawTile(faux, 0);
+      const mat = new THREE.MeshStandardMaterial({ map: faux.tex, roughness: 0.5, transparent: true, opacity: 0 });
+      const side = new THREE.MeshStandardMaterial({ color: 0xdcd5c8, roughness: 0.6, transparent: true, opacity: 0 });
+      const mesh = new THREE.Mesh(g, [mat, side]); mesh.visible = false; mesh.scale.setScalar(0.46); scene.add(mesh);
+      return { mesh, mat, side, a: 0, pulse: -9 };
+    });
+
+    const DRIFT = reduced ? 0.02 : 0.1, BASEP = 0.3;
+    const st = { yaw: 0.9, yawV: DRIFT, pitch: BASEP, pitchV: 0, roll: 0, rollV: 0, mode: 'free', target: 0, pitchT: BASEP, settleT: 0, time: 0, revealedView: false,
+      view: { sx: 0, sy: 0, tsx: 0, tsy: 0 } };
+    let hl = null, W = 1, H = 1, dist = 12, rPx = 200;
+    const I = new THREE.Quaternion();
+    const ease = x => x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
+    const tanH = Math.tan(FOV * Math.PI / 360);
+
+    function applyView() { camera.setViewOffset(W, H, st.view.sx, st.view.sy, W, H); camera.updateProjectionMatrix(); }
+    function viewTargets() {
+      const narrow = W < 820;
+      st.view.tsx = st.revealedView && !narrow ? W * 0.27 : 0;
+      st.view.tsy = st.revealedView && narrow ? H * 0.2 : 0;
+    }
+    // The revealed piece hovers in front of the globe (world z = HOVER_Z, clear of the surface so the
+    // orbiting pieces never pass through it), just left of the article card — or over the globe when narrow.
+    const HOVER_Z = 2.7, HOVER_S = 0.8, HOVER_SY = 0.46, ORB_X = 0.85, ORB_Y = 0.16, ORB_Z = 0.55;
+    const hovW = new THREE.Vector3(), hovQ = new THREE.Quaternion(), hovInv = new THREE.Quaternion(), hovDir = new THREE.Vector3();
+    const cardLeftPx = () => W * 0.95 - Math.min(680, W * 0.46);
+    const hoverPpu = () => (H / 2) / (tanH * Math.max(1, camera.position.z - HOVER_Z));  // screen px per world unit at hover depth
+    function hoverTarget(t) {  // returns the hover position in spin-local space; sets hovQ to face the camera
+      let sx, sy;
+      if (W < 820) { sx = W / 2 - st.view.tsx; sy = H / 2 - st.view.tsy; }
+      else { sx = cardLeftPx() - (ORB_X + 0.15) * hoverPpu() - 50; sy = H * HOVER_SY; }
+      camera.updateMatrixWorld();
+      hovDir.set(sx / W * 2 - 1, 1 - sy / H * 2, 0.5).unproject(camera).sub(camera.position);
+      hovW.copy(camera.position).addScaledVector(hovDir, (HOVER_Z - camera.position.z) / hovDir.z);
+      if (!reduced) hovW.y += Math.sin(st.time * 0.9) * 0.04;
+      spin.getWorldQuaternion(hovInv).invert();
+      hovDir.copy(camera.position).sub(hovW).normalize().applyQuaternion(hovInv);
+      hovQ.setFromUnitVectors(t.dir, hovDir);
+      return spin.worldToLocal(hovW);
+    }
+    function emitLayout() {
+      const cx = W / 2 - st.view.tsx, cy = H / 2 - st.view.tsy;
+      const lineY = Math.min(H - 110, cy + rPx * 1.2 + 10);
+      self.setState({ layout: { cx: Math.round(cx), lineY: Math.round(lineY) } });
+    }
+    function resize() {
+      W = host.clientWidth || window.innerWidth; H = host.clientHeight || window.innerHeight;
+      renderer.setSize(W, H, false); camera.aspect = W / H;
+      const narrow = W < 820, Rf = R * 1.05;
+      const fit = t => Rf / Math.sin(Math.atan(t));
+      dist = Math.max(fit((narrow ? 0.44 : 0.54) * tanH), fit(0.76 * tanH * camera.aspect));
+      camera.position.set(0, dist * Math.sin(EL), dist * Math.cos(EL)); camera.lookAt(0, 0, 0);
+      rPx = (Math.tan(Math.asin(R / dist)) / tanH) * H / 2;
+      viewTargets(); st.view.sx = st.view.tsx; st.view.sy = st.view.tsy; applyView(); emitLayout();
+    }
+    const ro = new ResizeObserver(resize); ro.observe(host); resize();
+
+    const spinQ = new THREE.Quaternion(), camDir = new THREE.Vector3(), wv = new THREE.Vector3(), pv = new THREE.Vector3();
+    function inkWord(word) {
+      spin.getWorldQuaternion(spinQ);
+      camDir.set(-0.4, 0.15, 0.9).normalize();
+      const cands = tiles.filter(t => t !== (hl && hl.t) && !t.ink && t.b >= 1 && t.b <= 4)
+        .map(t => ({ t, s: wv.copy(t.dir).applyQuaternion(spinQ).dot(camDir) })).sort((a, b) => b.s - a.s).slice(0, 4);
+      if (!cands.length) return;
+      const t = cands[Math.floor(rnd() * cands.length)].t;
+      t.word = word; t.ink = { t0: st.time };
+    }
+    function snapHome() {
+      if (!hl) return;
+      const m = hl.t.mesh; m.position.copy(hl.t.home); m.quaternion.identity(); m.scale.setScalar(1);
+      m.material = [hl.t.mat, sideMat]; hl.t.mat.emissive.setHex(0); glow.material.opacity = 0; hl = null;
+    }
+    function reveal() {
+      if (hl && hl.stage !== 'return') return;
+      snapHome();
+      const yawStop = st.yaw + Math.max(0, st.yawV - DRIFT) / 1.25 + 0.35;
+      let gLon = Math.atan2(gaps.reduce((a, g) => a + g.dir.x, 0), gaps.reduce((a, g) => a + g.dir.z, 0));
+      let best = null;
+      for (const t of tiles) {
+        if (t.b < 2 || t.b > 3) continue;
+        let dl = Math.abs(((t.lon - gLon) % TAU + TAU) % TAU); dl = Math.min(dl, TAU - dl);
+        if (dl > 1.2) continue;
+        let y = -t.lon; while (y < yawStop) y += TAU; while (y - TAU >= yawStop) y -= TAU;
+        if (!best || y < best.y) best = { t, y };
+      }
+      st.mode = 'settle'; st.target = best.y; st.pitchT = 0.34; st.settleT = 0;
+      hl = { t: best.t, stage: 'settle', t0: st.time, pulse: -9 };
+    }
+    function startLift() {
+      hl.stage = 'lift'; hl.t0 = st.time;
+      hl.t.mesh.material = [hl.t.mat, edgeMat]; hl.t.mat.emissive.setHex(0x4a3812);
+      st.revealedView = true; viewTargets(); emitLayout();
+      self.setState({ revealed: true });
+    }
+    function release() {
+      st.mode = 'free'; st.yawV = Math.max(st.yawV, DRIFT);
+      if (st.revealedView) { st.revealedView = false; viewTargets(); emitLayout(); }
+      if (!hl) return;
+      if (hl.stage === 'settle') { hl = null; return; }
+      if (hl.stage === 'return') return;
+      const m = hl.t.mesh;
+      hl.from = { pos: m.position.clone(), quat: m.quaternion.clone(), s: m.scale.x, g: glow.material.opacity };
+      hl.stage = 'return'; hl.t0 = st.time;
+    }
+    function updateHighlight() {
+      if (!hl) return;
+      const t = hl.t, m = t.mesh, a = st.time - hl.t0;
+      const pulse = Math.max(0, Math.min(1, (st.time - hl.pulse) / 0.7)), pk = pulse < 1 ? Math.sin(Math.PI * pulse) : 0;
+      if (hl.stage === 'settle') { m.position.copy(t.home); return; }
+      if (hl.stage === 'lift' || hl.stage === 'pause') {
+        const e = hl.stage === 'lift' ? ease(Math.min(1, a / 1.2)) : 1;
+        m.position.copy(t.home).addScaledVector(t.dir, 0.5 * e);
+        m.scale.setScalar((1 + 0.1 * e) * (1 - 0.07 * pk));
+        glow.material.opacity = 0.85 * e; t.mat.emissiveIntensity = 0.5 * e;
+        if (hl.stage === 'lift' && a >= 1.2) { hl.stage = (self.props.slotFlourish ?? true) ? 'pause' : 'fly'; hl.t0 = st.time; }
+        else if (hl.stage === 'pause' && a >= 0.5) { hl.stage = 'fly'; hl.t0 = st.time; }
+      } else if (hl.stage === 'fly') {  // glide off the globe to the hover spot beside the card
+        const e = ease(Math.min(1, a / 1.6));
+        const P1 = hoverTarget(t), P0 = pv.copy(t.home).addScaledVector(t.dir, 0.5);
+        m.position.lerpVectors(P0, P1, e); m.quaternion.slerpQuaternions(I, hovQ, e);
+        m.scale.setScalar(1.1 + (HOVER_S - 1.1) * e);
+        if (a >= 1.6) { hl.stage = 'hover'; hl.t0 = st.time; }
+      } else if (hl.stage === 'hover') {
+        m.position.copy(hoverTarget(t)); m.quaternion.copy(hovQ);
+        m.scale.setScalar(HOVER_S * (1 - 0.07 * pk));
+        glow.material.opacity = 0.75 + (reduced ? 0 : 0.1 * Math.sin(st.time * 1.2));
+      } else if (hl.stage === 'return') {
+        const e = ease(Math.min(1, a / 1.1));
+        m.position.lerpVectors(hl.from.pos, t.home, e); m.quaternion.slerpQuaternions(hl.from.quat, I, e);
+        m.scale.setScalar(hl.from.s + (1 - hl.from.s) * e);
+        glow.material.opacity = hl.from.g * (1 - e); t.mat.emissiveIntensity = 0.5 * (1 - e);
+        if (a >= 1.1) { snapHome(); return; }
+      }
+      glow.position.copy(m.position).addScaledVector(wv.copy(t.dir).applyQuaternion(m.quaternion), -0.08);  // just behind the face
+    }
+    const onStages = { lift: 1, pause: 1, fly: 1, hover: 1 };
+    function project(v) { pv.copy(v).project(camera); return { x: (pv.x * 0.5 + 0.5) * W, y: (-pv.y * 0.5 + 0.5) * H }; }
+    const lastOp = ['', '', ''];
+    function setOp(i, el, v) { if (lastOp[i] !== v) { lastOp[i] = v; el.style.opacity = v; if (i > 0) el.style.pointerEvents = v === '1' ? 'auto' : 'none'; } }
+    function updateOrbitsAndLabels(dt) {
+      const on = !!(hl && onStages[hl.stage]);
+      const hp = new THREE.Vector3(); if (hl) hl.t.mesh.getWorldPosition(hp);
+      const hs2 = hl ? project(hp) : { x: 0, y: 0 };
+      orbs.forEach((o, k) => {
+        o.a += ((on ? 1 : 0) - o.a) * (1 - Math.exp(-2.5 * dt));
+        o.mesh.visible = o.a > 0.01; o.mat.opacity = o.side.opacity = o.a * 0.92;
+        if (o.mesh.visible && hl) {
+          const ang = st.time * (reduced ? 0.04 : 0.2) + k * Math.PI + 0.4;
+          const pk = Math.max(0, 1 - (st.time - o.pulse) / 0.7);
+          o.mesh.position.set(hp.x + Math.cos(ang) * ORB_X, hp.y + Math.sin(ang) * ORB_Y + 0.05, hp.z + Math.sin(ang) * ORB_Z + 0.2);
+          o.mesh.rotation.set(0.15 * Math.sin(st.time * 0.5 + k), -0.35 * Math.cos(ang), 0);
+          o.mesh.scale.setScalar(0.46 * (1 + 0.12 * Math.sin(Math.PI * Math.min(1, 1 - pk))));
+        }
+        const el = self['alsoRef' + k].current; if (!el) return;
+        if (o.a > 0.35 && hl) {
+          const p = project(o.mesh.position), fr = Math.max(0, Math.min(1, 0.5 - (p.x - hs2.x) / 90));
+          const lw = el.offsetWidth || 200, gcp = project(root.getWorldPosition(new THREE.Vector3()));
+          const maxX = (st.revealedView && W >= 820 ? cardLeftPx() : W) - 16;
+          let lx = p.x + 30 - 60 * fr - fr * lw, ly = p.y;
+          const overGlobe = (x) => x < gcp.x + rPx && x + lw > gcp.x - rPx && Math.abs(ly - gcp.y) < rPx;
+          if (W >= 820 && st.revealedView) {  // stacked under the hovering piece, flush with the card's left edge
+            lx = Math.max(16, maxX - lw); ly = H * HOVER_SY + hoverPpu() * (0.55 * HOVER_S + ORB_Y) + 26 + k * 36;
+          } else if (lx < 16 || lx + lw > maxX || overGlobe(lx)) {
+            lx = Math.max(16, Math.min(maxX - lw, gcp.x - lw / 2)); ly = gcp.y + rPx + 22 + k * 30;
+          }
+          el.style.transform = 'translate(' + lx + 'px,' + ly + 'px) translate(0,-50%)';
+          setOp(k + 1, el, '1');
+        } else setOp(k + 1, el, '0');
+      });
+      const here = self.hereRef.current;
+      if (here) {
+        if (hl && onStages[hl.stage] && hl.stage !== 'lift') {
+          here.style.transform = 'translate(' + hs2.x + 'px,' + hs2.y + 'px) translate(-50%, calc(-100% - ' + Math.round(hl.stage === 'fly' || hl.stage === 'hover' ? hoverPpu() * 0.55 * HOVER_S + 14 : rPx * 0.22 + 10) + 'px))';
+          setOp(0, here, '1');
+        } else setOp(0, here, '0');
+      }
+    }
+
+    const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
+    const hit = e => {
+      if (!orbs[0].mesh.visible) return -1;
+      const r = cv.getBoundingClientRect(); ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+      ray.setFromCamera(ndc, camera); const h = ray.intersectObjects(orbs.map(o => o.mesh), false)[0];
+      return h ? orbs.findIndex(o => o.mesh === h.object) : -1;
+    };
+    const onClick = e => { const k = hit(e); if (k >= 0) self.pickAlso(k); };
+    const onMove = e => { cv.style.cursor = hit(e) >= 0 ? 'pointer' : 'default'; };
+    cv.addEventListener('click', onClick); cv.addEventListener('pointermove', onMove);
+
+    const clock = new THREE.Clock();
+    renderer.setAnimationLoop(() => {
+      const dt = Math.min(0.05, clock.getDelta()); st.time += dt; const T = st.time;
+      if (st.mode === 'free') {
+        st.yawV = DRIFT + (st.yawV - DRIFT) * Math.exp(-1.25 * dt);
+      } else {
+        st.yawV += (3.2 * (st.target - st.yaw) - 3.58 * st.yawV) * dt;
+        if (hl && hl.stage === 'settle') { st.settleT += dt; if ((Math.abs(st.target - st.yaw) < 0.006 && Math.abs(st.yawV) < 0.02) || st.settleT > 3.4) startLift(); }
+      }
+      st.yaw += st.yawV * dt;
+      const pt = st.mode === 'free' ? BASEP : st.pitchT;
+      st.pitchV += (-(st.pitch - pt) * 5 - 4.47 * st.pitchV) * dt; st.pitch += st.pitchV * dt;
+      st.rollV += (-st.roll * 5 - 4.47 * st.rollV) * dt; st.roll += st.rollV * dt;
+      spin.rotation.y = st.yaw; tilt.rotation.set(st.pitch, 0, st.roll);
+      root.position.y = reduced ? 0.06 : 0.06 + Math.sin(T * 0.45) * 0.04;
+      shadow.material.opacity = 1 - root.position.y * 1.6; shadow.scale.setScalar(4.3 + root.position.y * 2);
+      const ve = 1 - Math.exp(-2.2 * dt), v = st.view;
+      if (Math.abs(v.tsx - v.sx) > 0.2 || Math.abs(v.tsy - v.sy) > 0.2) { v.sx += (v.tsx - v.sx) * ve; v.sy += (v.tsy - v.sy) * ve; applyView(); }
+      for (const t of tiles) {
+        let off = reduced ? 0 : Math.sin(T * 0.7 + t.phase) * 0.007;
+        if (t.ink) {
+          const a = T - t.ink.t0;
+          let wa = a < 0.6 ? ease(a / 0.6) : a < 3.0 ? 1 : a < 3.9 ? 1 - ease((a - 3) / 0.9) : 0;
+          if (a >= 3.9) { t.ink = null; wa = 0; }
+          off += 0.05 * wa;
+          const q = Math.round(wa * 14) / 14; if (q !== t.inkA) { t.inkA = q; drawTile(t, q); }
+        }
+        if (hl && t === hl.t) continue;
+        t.mesh.position.copy(t.home).addScaledVector(t.dir, off);
+      }
+      updateHighlight(); updateOrbitsAndLabels(dt);
+      renderer.render(scene, camera);
+    });
+
+    this.sceneApi = {
+      impulse: m => { const k = reduced ? 0.15 : 1; st.yawV = Math.min(3.2, st.yawV + (0.35 + 1.5 * m) * k); st.pitchV += (rnd() * 2 - 1) * 0.5 * m * k; st.rollV += (rnd() * 2 - 1) * 0.35 * m * k; },
+      inkWord, reveal, release,
+      swap: k => { if (hl) hl.pulse = st.time; orbs[k].pulse = st.time; },
+      setAccent, setQuality: q => { renderer.setPixelRatio(dprFor(q)); resize(); },
+      dispose: () => { renderer.setAnimationLoop(null); ro.disconnect(); cv.removeEventListener('click', onClick); cv.removeEventListener('pointermove', onMove); renderer.dispose(); cv.remove(); }
+    };
+  }
+
+  renderVals() {
+    const s = this.state, narrow = s.vw < 820;
+    const pw = s.partial.trim().split(/\s+/).filter(Boolean);
+    const tokens = s.finals.map(w => ({ text: w, final: true, partial: false }));
+    pw.slice(s.finals.length).forEach(w => tokens.push({ text: w, final: false, partial: true }));
+    const a = s.article || { title: '', description: '', url: '', thumbnail: '', extract: '', parts: null };
+    const ex = (a.extract || '').trim();
+    const f = v => (v == null || isNaN(v)) ? '—' : Number(v).toFixed(2);
+    const L = s.layout || { cx: s.vw / 2, lineY: s.vh * 0.8 };
+    const blur = fn => e => { if (e && e.currentTarget) e.currentTarget.blur(); fn(); };
+    return {
+      thumbRef: this.thumbRef, grainRef: this.grainRef, hostRef: this.hostRef, hereRef: this.hereRef, alsoRef0: this.alsoRef0, alsoRef1: this.alsoRef1,
+      isLive: s.status === 'live', isDemo: s.status === 'demo', isConnecting: s.status === 'connecting',
+      isPaused: !!s.paused, notPaused: !s.paused,
+      reconnect: blur(() => this.connect()),
+      tokens, showPrompt: tokens.length === 0 && !s.revealed,
+      lineLeft: L.cx + 'px', lineTop: L.lineY + 'px', lineWidth: narrow ? 'min(86vw,720px)' : Math.max(280, Math.min(720, 2 * (L.cx - 16))) + 'px', lineOpacity: (narrow && s.revealed) ? '0' : '1',
+      art: a, hasThumb: !!a.thumbnail, noThumb: !a.thumbnail, thumbAlt: a.title ? 'Illustration for ' + a.title : '',
+      dropCap: ex.slice(0, 1), extractRest: ex.slice(1),
+      relS: f(a.parts && a.parts.rel), covS: f(a.parts && a.parts.cov), intS: f(a.parts && a.parts.int),
+      sourceWords: s.words.join(' · '),
+      also0: s.also[0] || '', also1: s.also[1] || '',
+      pickAlso0: blur(() => this.pickAlso(0)), pickAlso1: blur(() => this.pickAlso(1)),
+      cardLeft: narrow ? '0' : 'auto', cardRight: narrow ? '0' : '5vw', cardTop: narrow ? 'auto' : '50%', cardBottom: narrow ? '0' : 'auto',
+      cardWidth: narrow ? 'auto' : 'min(680px, 46vw)', cardMaxH: narrow ? '58vh' : 'calc(100vh - 130px)',
+      cardTranslate: narrow ? (s.revealed ? '0 0' : '0 105%') : (s.revealed ? '0 calc(-50% + 30px)' : '0 calc(-50% + 44px)'),
+      cardOpacity: (s.revealed && !s.swapping) ? '1' : '0', cardEvents: s.revealed ? 'auto' : 'none',
+      replay: blur(() => { if (!this.demo.active) this.startDemo(); this.loadSession(this.demo.idx); }),
+      nextSession: blur(() => { if (!this.demo.active) this.startDemo(); this.loadSession((this.demo.idx + 1) % this.sessions.length); }),
+      togglePause: blur(() => this.togglePause()),
+      handleStop: blur(() => this.handleStop()),
+      pauseLabel: s.paused ? 'resume' : 'pause', pauseVerb: s.paused ? 'to resume' : 'to pause',
+      // as many extract lines as the card can hold: card max height minus the fixed parts (header, title, chips, footnotes)
+      clampLines: Math.max(4, Math.min(16, Math.floor(((narrow ? s.vh * 0.58 : s.vh - 130) - (s.vh >= 680 ? 400 : 320)) / 30))), roomy: s.vh >= 680,
+      sessionNo: ['i', 'ii', 'iii'][s.session] + ' of iii'
+    };
+  }
+}
+</script>
+</body>
+</html>

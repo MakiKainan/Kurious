@@ -8,3 +8,6 @@ urllib3==2.6.3
 sentence-transformers==6.1.0
 torch==2.12.1
 numpy==2.3.5
+# frontend WebSocket bridge
+websockets==16.1.1
+
